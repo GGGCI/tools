@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Artex / AI Agent 攻擊偵測 — 主管摘要報告</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --card:#ffffff; --ink:#1a1d21; --muted:#5b6670; --line:#e2e6ea;
+    --brand:#1f4e79; --brand-soft:#eaf1f8;
+    --ok:#1b7f4b; --ok-bg:#e7f5ec; --warn:#9a6b00; --warn-bg:#fcf3e0; --bad:#b4342b; --bad-bg:#fdecea;
+    --code-bg:#1e2733; --code-ink:#e6edf3;
+    --maxw:960px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0f1317; --card:#171c22; --ink:#e7ebef; --muted:#9aa5b1; --line:#2a323b;
+      --brand:#6ea8dc; --brand-soft:#17222e;
+      --ok:#5fd199; --ok-bg:#14271d; --warn:#e6bf5e; --warn-bg:#2a2112; --bad:#f0897f; --bad-bg:#2c1614;
+    }
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    line-height:1.7; font-size:16px;
+  }
+  .wrap{max-width:var(--maxw); margin:0 auto; padding:16px;}
+  header.cover{
+    background:linear-gradient(135deg,var(--brand),#163a5a); color:#fff;
+    border-radius:16px; padding:32px 28px; margin:16px 0 24px;
+  }
+  header.cover .kicker{font-size:13px; letter-spacing:.14em; text-transform:uppercase; opacity:.85; margin:0 0 8px}
+  header.cover h1{font-size:28px; line-height:1.25; margin:0 0 14px; font-weight:800}
+  header.cover .verdict{
+    background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.25);
+    border-radius:12px; padding:14px 16px; font-size:15px;
+  }
+  .meta{display:flex; flex-wrap:wrap; gap:8px 20px; margin-top:16px; font-size:13.5px; opacity:.92}
+  .meta b{font-weight:700}
+  h2{font-size:21px; margin:34px 0 12px; padding-bottom:8px; border-bottom:2px solid var(--line); font-weight:800}
+  h3{font-size:17px; margin:22px 0 8px; color:var(--brand); font-weight:700}
+  p{margin:10px 0}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px 20px; margin:14px 0;
+    box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  ol,ul{margin:10px 0; padding-left:22px}
+  li{margin:6px 0}
+  table{width:100%; border-collapse:collapse; margin:12px 0; font-size:14.5px; background:var(--card);
+    border:1px solid var(--line); border-radius:12px; overflow:hidden}
+  th,td{text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); vertical-align:top}
+  th{background:var(--brand-soft); color:var(--ink); font-weight:700}
+  tr:last-child td{border-bottom:0}
+  .tag{display:inline-block; font-weight:800; border-radius:6px; padding:1px 8px; font-size:13px; white-space:nowrap}
+  .t-ok{color:var(--ok); background:var(--ok-bg)}
+  .t-warn{color:var(--warn); background:var(--warn-bg)}
+  .t-bad{color:var(--bad); background:var(--bad-bg)}
+  .reasons{counter-reset:r; list-style:none; padding:0}
+  .reasons li{position:relative; padding:12px 14px 12px 52px; margin:10px 0; background:var(--brand-soft);
+    border-radius:12px; border:1px solid var(--line)}
+  .reasons li::before{counter-increment:r; content:counter(r); position:absolute; left:14px; top:12px;
+    width:26px; height:26px; border-radius:50%; background:var(--brand); color:#fff; font-weight:800;
+    display:flex; align-items:center; justify-content:center; font-size:14px}
+  pre{background:var(--code-bg); color:var(--code-ink); border-radius:12px; padding:14px 16px; overflow:auto;
+    font-size:13px; line-height:1.55; margin:10px 0}
+  code{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace}
+  pre code{color:inherit}
+  p code,li code,td code{background:var(--brand-soft); color:var(--ink); padding:1px 6px; border-radius:5px; font-size:13px}
+  .evid{border-left:4px solid var(--brand); background:var(--brand-soft); padding:10px 14px; border-radius:0 10px 10px 0; margin:10px 0; font-size:14.5px}
+  .foot{color:var(--muted); font-size:13px; margin:30px 0 10px; text-align:center}
+  .pill{display:inline-block; background:var(--brand-soft); color:var(--brand); border:1px solid var(--line);
+    border-radius:999px; padding:2px 12px; font-size:13px; font-weight:700; margin:2px 4px 2px 0}
+  @media print{
+    body{background:#fff; font-size:12pt}
+    .wrap{max-width:none; padding:0}
+    header.cover{background:#1f4e79 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact}
+    .card,table,pre,.evid,.reasons li{break-inside:avoid}
+    th{-webkit-print-color-adjust:exact; print-color-adjust:exact}
+    h2{break-after:avoid}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="cover">
+  <p class="kicker">資安事件分析 · 主管摘要</p>
+  <h1>Artex / AI Agent 攻擊偵測報告</h1>
+  <div class="verdict">
+    <b>一句話結論：</b>這三波攻擊是<b>高度自動化、會隨現況調整的「代理型(agent-like)」攻擊,與 Artex 相符;本次已確知來源就是 Artex</b>(信心中高)。
+    但要誠實說:<b>單憑這些網路特徵,無法對「來路不明」的攻擊斷定它一定是 AI</b>——進階的自動化掃描工具也能裝得很像。要做到「指名道姓、即時、精準」還需補幾項資料。
+  </div>
+  <div class="meta">
+    <span><b>日期</b>　2026-10-19</span>
+    <span><b>對象</b>　資安主管 / 決策層</span>
+    <span><b>標的</b>　三份去識別化 SIEM log(10/14、10/15、10/16)+ Artex 工具原始碼</span>
+  </div>
+</header>
+
+<h2>一、給長官的一頁摘要</h2>
+
+<div class="card">
+<h3>發生什麼事</h3>
+<p>有外部來源連續三天對我們兩個應用系統(APP_A、APP_B)發動攻擊。表面上看起來「很像一般駭客」——掃描、試探、丟弱點攻擊。但把流量的<b>節奏、工具指紋、攻擊邏輯</b>攤開後,它的行為模式<b>比較像一台 AI 自動代理在打,而不是一個人坐在鍵盤前</b>。</p>
+</div>
+
+<h3>我們憑什麼這樣判斷</h3>
+<ol class="reasons">
+  <li><b>節奏像機器在「想一下、打一批」。</b>它每打一小批請求(2～5 個、幾乎同一秒)就固定停約 <b>17～20 秒</b>,再打下一批,反覆上百次。這個停頓正好是 AI 呼叫大型語言模型「思考下一步」的時間。人類不會這麼規律,傳統掃描器則是一路狂衝、不會停下來想。</li>
+  <li><b>同一個來源冒出一堆、甚至假造的瀏覽器身分。</b>同一個 IP 用了 7～11 種不同瀏覽器識別字串,其中有些是<b>物理上不可能存在的版本</b>(等於偽造)。代表背後是程式在拼裝請求,不是一個真人的瀏覽器。</li>
+  <li><b>它「先看懂再精準打」,不是亂槍打鳥。</b>它會先把網站前端程式碼抓下來讀懂,找出真正的後台介面,再精準攻擊——這比一般掃描器(拿字典硬碰)更進階。</li>
+</ol>
+<div class="plain" style="border-left-color:var(--warn)"><span class="lbl" style="color:var(--warn)">⚠️ 誠實補充(很重要)</span>以上三點能證明的是「<b>高度自動化、而且會隨現況調整</b>」。但要公正地說:<b>一套夠進階的傳統自動化掃描工具,也可能做出很像的行為</b>。所以——<b>本次</b>因為已知來源就是 Artex,判斷成立;但面對<b>來路不明</b>的攻擊,光憑這些特徵<b>還不能百分百斷定對方一定是 AI</b>。要補的就是那關鍵一步(見建議)。</div>
+
+<div class="card">
+<h3>這對我們的意義</h3>
+<ul>
+  <li><b>更快、更廣、更會繞：</b>一台 AI 代理可同時開最多 <b>5 條攻擊線</b>並行,遇到防火牆擋下來會自己換手法再試——等於把「一個人」的操作量放大成一個小團隊。</li>
+  <li><b>門檻降低：</b>這類工具讓低技術者也能發動過去需資深滲透人員才做得到的攻擊。</li>
+  <li><b>傳統規則容易漏：</b>既有告警多半針對「單一已知特徵」,對這種「每步都合理、合起來才危險」的行為,容易一條條看起來不嚴重而放過。</li>
+</ul>
+</div>
+
+<h3>我們現在能做 / 還做不到(誠實講)</h3>
+<table>
+  <tr><th style="width:92px">狀態</th><th>說明</th></tr>
+  <tr><td><span class="tag t-ok">現在能做</span></td><td>用手上的 ArcSight 欄位建立一組「加權計分」偵測規則,把這種 AI 代理行為標記出來、進觀察名單、升級告警。</td></tr>
+  <tr><td><span class="tag t-warn">做得到但有限</span></td><td>關鍵的「節奏」訊號,因為 log 時間戳<b>只精確到『秒』</b>,只能做近似版,算不到毫秒級精細節拍;可分析資料量也偏少。</td></tr>
+  <tr><td><span class="tag t-bad">目前做不到</span></td><td>(1) <b>我們沒有完整的網頁存取紀錄</b>——WAF/IPS 只在「被擋/命中」時才收,只有防火牆全收(詳見第三節);(2) 看不到攻擊者那台機器去呼叫 AI 模型的連線(在我們網路外,本來就抓不到);(3) 沒有完整封包,無法用更底層指紋;(4) 無法單憑網路 log <b>指名「就是 Artex」</b>——只能說「是某種 AI 代理」。</td></tr>
+</table>
+
+<div class="card">
+<h3>建議(三點)</h3>
+<ol>
+  <li><b>先把偵測規則上線</b>(第三節列出哪些現在就能做),用這三份已知樣本校準。</li>
+  <li><b>補兩項資料能力:</b>把 log 時間精度提高(到毫秒或保留原始時間)、開啟 TLS/封包指紋擷取——這兩項能把判斷從「中高」推到「高」。</li>
+  <li><b>做一次實驗室實測:</b>我們自己用 Artex 打一台誘餌靶機,建立它的「指紋基準」,未來才能從「是 AI 代理」收斂到「就是這支工具」。</li>
+</ol>
+</div>
+
+<h2>二、白話對照</h2>
+<table>
+  <tr><th>比較點</th><th>一般駭客(人)</th><th>傳統掃描器</th><th>AI 代理(Artex)</th></tr>
+  <tr><td>打法節奏</td><td>零散、想到哪打到哪</td><td>一路狂衝、不停</td><td><b>打一批→停下想 17~20 秒→再打</b>,很規律</td></tr>
+  <tr><td>身分偽裝</td><td>通常固定一個</td><td>固定一個工具名</td><td><b>一堆、還有假造版本</b></td></tr>
+  <tr><td>找目標方式</td><td>邊看邊找</td><td>拿字典硬試(大量失敗)</td><td><b>先讀懂網站再精準打</b>(失敗少)</td></tr>
+  <tr><td>遇到阻擋</td><td>手動換個方式</td><td>照既定規則</td><td><b>自己變形、換手法再試</b></td></tr>
+  <tr><td>攻擊規模</td><td>一條線</td><td>很多條但一模一樣</td><td><b>最多 5 條並行,各自會思考</b></td></tr>
+  <tr><td>比喻</td><td>一個小偷逐間試門</td><td>拿萬能鑰匙串逐把試</td><td><b>一組會看地圖、分工、邊打邊學的團隊,但其實是一支程式</b></td></tr>
+</table>
+
+<h2>三、誠實的現況能力評估(ArcSight × 目前這批 log)</h2>
+<p>直接回答:<b>就現在這批 log,ArcSight 到底看得到什麼、看不到什麼、現在能做什麼。</b></p>
+
+<div class="card" style="border-left:4px solid var(--bad)">
+<h3 style="margin-top:4px">先講一個前提:我們的資料本來就不完整</h3>
+<p>這很重要,因為它決定了這份判斷的可信範圍。我們的 SIEM <b>沒有收完整的網頁存取紀錄</b>,各設備收的範圍差很多:</p>
+<table>
+  <tr><th>設備</th><th>收錄範圍</th><th>意義</th></tr>
+  <tr><td><b>防火牆(FW)</b></td><td><span class="tag t-ok">全部都收</span></td><td>每條連線都有:誰、幾點、連多久、流量多少(但不含網頁內容)</td></tr>
+  <tr><td><b>網站防火牆(WAF)</b></td><td><span class="tag t-bad">只在「被擋/觸發規則」時才收</span></td><td>看得到網址、瀏覽器身分、攻擊字串,但<b>只有被攔的那些</b></td></tr>
+  <tr><td><b>入侵防禦(IPS)</b></td><td><span class="tag t-bad">只在命中攻擊特徵時才收</span></td><td>同樣只有命中的那幾筆</td></tr>
+</table>
+<div class="plain"><span class="lbl">💡 白話比喻</span>我們手上不是「整天的監視器錄影」,而是「<b>保全每次按下警報那幾秒的片段</b>」(WAF/IPS)——沒觸發警報的正常試探完全沒錄到。只有防火牆像「大門進出登記簿」,每個人進出都記,但不記他在裡面做了什麼。</div>
+<p><b>這對本報告的影響(已據實處理):</b></p>
+<ul>
+  <li>判斷「攻擊節奏」時,我們<b>改用『全都有收』的防火牆連線資料重算</b>,確認 10/14、10/15 的規律節奏成立——這部分<b>證據紮實</b>。</li>
+  <li>「網頁內容」層的證據(網址、攻擊字串)是<b>不完整的抽樣</b>,只能當輔證,不能拿來算「總共打了幾次、猜錯幾次」。</li>
+  <li><b>10/16 這天證據較弱</b>(防火牆剛好缺了連線建立紀錄),信心低於另外兩天。</li>
+</ul>
+<p style="margin-bottom:4px"><b>給決策的一句話:</b>補齊「完整網頁存取紀錄」是把這套偵測從「中高信心」推到「高信心」最關鍵、也最划算的一項投資。</p>
+</div>
+
+
+<h3><span class="tag t-ok">✅</span> 現在看得到、現在就能做</h3>
+<table>
+  <tr><th>能力</th><th>依據的 log 欄位</th><th>說明</th></tr>
+  <tr><td>辨識多重 / 假造瀏覽器身分</td><td><code>requestClientApplication</code>、<code>analysisUserAgentFamily</code></td><td>欄位完整,規則(R2)現在就能建,效果好</td></tr>
+  <tr><td>辨識「先讀後打」語意覆蓋</td><td><code>requestUrl</code>、<code>analysisEndpointCategory</code></td><td>WAF 已標好分類(API/檔案/敏感路徑),規則(R3)可直接用</td></tr>
+  <tr><td>辨識繞過變形</td><td><code>analysisIsPathMutation</code>、<code>requestUrl</code></td><td>WAF <b>已內建判斷路徑變形</b>欄位,規則(R4)幾乎現成</td></tr>
+  <tr><td>辨識跨框架弱點攻擊共現</td><td>Firepower <code>deviceEventClassId</code>、WAF Signature</td><td>IPS/WAF 簽章齊全,規則(R5)可建</td></tr>
+  <tr><td>辨識並行攻擊線、狀態輪詢</td><td>PAN-OS session 欄位、<code>requestUrl</code></td><td>規則(R6/R7)可建</td></tr>
+  <tr><td>用已知樣本校準門檻</td><td>這三份已知是 Artex 所打</td><td>屬「標準答案」,最適合拿來調規則準度</td></tr>
+</table>
+<div class="evid"><b>好消息：</b>你們的 WAF(Imperva SecureSphere)已輸出一批<b>加值判斷欄位</b>(<code>analysisIsPathMutation</code>、<code>analysisIsGenericSensitivePath</code>、<code>analysisEndpointCategory</code>、<code>analysisUserAgentFamily</code>)。等於有人先幫我們做了一半,偵測規則不用從零刻。</div>
+
+<h3><span class="tag t-warn">⚠️</span> 看得到、但有限(需調校或補強)</h3>
+<table>
+  <tr><th>限制</th><th>影響</th><th>可行緩解</th></tr>
+  <tr><td><b>時間戳只到「秒」</b></td><td>最強的「節奏」訊號只能用「同秒多筆+秒級停頓」近似,<b>算不出毫秒節拍</b></td><td>先上近似版;推動來源設備保留毫秒 / 原始時間</td></tr>
+  <tr><td>可分析資料量偏少</td><td>每天真正能做行為分析的 WAF HTTP 事件僅約 1000 筆,統計穩定度有限</td><td>門檻用「多天資料」校準,避免過擬合</td></tr>
+  <tr><td><code>requestMethod</code> 品質不穩</td><td>有時被塞進二進位 / 攻擊字串,解析會出錯</td><td>規則加防呆、以正則擷取</td></tr>
+  <tr><td><code>analysis*</code> 為自訂欄位</td><td>若 ESM 正式管線沒穩定映射,規則會「無欄位可查」</td><td>上線前先確認欄位 parsing 進 ESM</td></tr>
+  <tr><td>單一來源 IP(去識別化)</td><td>無法做跨 IP / 基礎設施關聯;真實 agent 可能換 IP</td><td>正式環境改以「行為指紋」而非純 IP 關聯</td></tr>
+</table>
+
+<h3><span class="tag t-bad">❌</span> 現在看不到、做不到(需補資料或另立基準)</h3>
+<table>
+  <tr><th>做不到的事</th><th>原因</th><th>要補什麼才能做</th></tr>
+  <tr><td>看攻擊者連 AI 模型的連線(最強鐵證)</td><td>那條連線在<b>我們網路外</b>,周界 SIEM 本就抓不到</td><td>僅限實驗室自測 / 內部被入侵主機 / 對外 proxy</td></tr>
+  <tr><td>用底層指紋認工具(TLS JA3/JA4、header 順序)</td><td>這批 log <b>沒有封包與完整標頭</b></td><td>FW/WAF 開 TLS 指紋擷取,或加 Zeek/Suricata</td></tr>
+  <tr><td>精準毫秒節拍分析</td><td>時間戳只到秒</td><td>提高時間精度</td></tr>
+  <tr><td><b>網路 log 直接指名「就是 Artex」</b></td><td>網路層只能到「是某種 AI 代理」</td><td>實驗室用 Artex 建指紋基準,再做 1:1 比對</td></tr>
+  <tr><td>即時阻斷</td><td>這批是<b>事後匯出的靜態 CSV</b>,屬離線分析</td><td>把規則(R0–R6)建成 ArcSight 即時 rule + data monitor</td></tr>
+</table>
+<div class="evid"><b>一句話總結現況：</b>「區分是不是 AI 代理」——現在用手上資料就做得到(信心中高);「即時、毫秒精準、指名是 Artex」——還需補時間精度、封包指紋,以及一次實驗室基準實測。</div>
+
+<h2>四、技術附錄：Artex 行為 ↔ 實際程式碼 ↔ log 證據</h2>
+<p style="color:var(--muted);font-size:14px">給工程團隊。檔案路徑相對於 Artex repo 根目錄。</p>
+
+<h3>A1　「想一下、打一批」節奏</h3>
+<p><b>(1) 一次思考會回傳「一批」工具呼叫 → 同秒微爆發</b>　<code>agent/deferred.go</code></p>
+<pre><code>for _, m := range msgs {
+    for _, b := range m.ToolUses() {   // 一則 LLM 回應可含「多個」工具呼叫 → 批次執行
+        if b.Name != "Skill" {
+            continue
+        }
+        ...
+    }
+}</code></pre>
+<p><b>(2) 兩批之間在「等 AI 模型回應」 → 17~20 秒停頓</b>　<code>agent/provider.go</code></p>
+<pre><code>default:
+    c.Format = llm.FormatAnthropic
+    // provider appends "/v1/messages".
+    c.BaseURL = strings.TrimRight(strings.TrimSuffix(c.BaseURL, "/v1/messages"), "/")
+    if c.Model == "" {
+        c.Model = "claude-opus-4-8"   // 預設模型;推理延遲 ≈ log 停頓中位 17~20s
+    }</code></pre>
+<div class="evid"><b>log 證據：</b>爆發群 123/120/285 個;每群中位 4/5/2 筆;群間停頓中位 <b>17/19/20 秒</b>;同秒請求占比 65/63/45%。</div>
+
+<h3>A2　多重 / 假造 User-Agent</h3>
+<p><b>(1) 以無頭瀏覽器(Playwright)打 → 真實 Chromium UA</b>　<code>db/db.go</code>(預設<b>關閉</b>,操作者啟用;擷取時走側錄 proxy)</p>
+<pre><code>// Seed the built-in browser (Playwright) MCP once — DISABLED by default ...
+INSERT INTO mcp_servers(name, transport, command, args, env, enabled)
+VALUES ('browser', 'stdio', 'npx', $1, '{}', false)
+...
+`["@playwright/mcp","--headless"]`</code></pre>
+<p><b>(2) 自訂 HTTP 工具 + 掃描器 → curl / 工具類 UA</b>　<code>server/customtool.go</code></p>
+<pre><code>client := &http.Client{Timeout: timeoutOr(spec.TimeoutMs, 30000)}
+if tr := s.httpProxyTransport(spec); tr != nil {
+    client.Transport = tr   // use_recording_proxy → 全程走 MITM 側錄
+}
+resp, err := client.Do(req)</code></pre>
+<div class="evid"><b>log 證據：</b>單源 10/7/11 種 UA,含 <code>Chrome/126.0 Safari/126.0</code>(Safari 版號抄 Chrome)、<code>Chrome/155.0.0.0</code>(不存在版本)、<code>Chrome/134.0.6998.35/36</code>(雙 build),及 <code>curl/7.88.1</code>、<code>i305-probe</code>、<code>norma/0.4</code>。</div>
+
+<h3>A3　「先讀後打」語意覆蓋</h3>
+<p>來自內建技能 <code>skills/api-recon/</code>:先用 <code>harvest_static.py</code> 下載整站 JS、解析真實後端介面,再由 Playwright 觸發枚舉(Phase 1~3)。</p>
+<div class="evid"><b>log 證據：</b>抓 <code>.js</code>(10.14 有 53 筆、含 <code>/dist/main.&lt;hash&gt;.js</code>);之後精準重打真實 API(<code>users-online-counter</code> 368/487 次、<code>/common/sendlogindata</code>);敏感路徑命中 346/332/235;字典噪音相對低。</div>
+
+<h3>A4　並行攻擊線</h3>
+<p><code>server/conversations.go</code>(觸發並發預設 <b>5</b>)</p>
+<pre><code>// 安全預設:serial / all / 5
+b := triggerBehavior{runMode: "serial", mergeMode: "all", maxParallel: 5}
+...
+if a.TriggerRunMode == "parallel" {
+    b.runMode = "parallel"   // 每次觸發各開一條並發會話,上限 = trigger_max_parallel
+}</code></pre>
+<div class="evid"><b>log 證據：</b>同一來源同標的同時數條並行 session,各自呈 A1 的節奏。</div>
+
+<h3>A5　可當「白名單」的 Artex 自身誠實 UA(非攻擊流量)</h3>
+<p><code>enrich/enrich.go</code>(自身情報增補用誠實 UA;<code>selfupdate</code> 用 <code>artex-selfupdate</code>)</p>
+<pre><code>req.Header.Set("User-Agent", "artex-enrich/1.0")</code></pre>
+<div class="evid"><b>用途：</b>這些 UA 只出現在 agent 主機<b>自己對外</b>,不會出現在被攻擊目標側。若未來在內網或 proxy 看到 <code>artex-enrich/*</code>、<code>artex-selfupdate</code>,等於直接命中 Artex 基礎設施。</div>
+
+<h2>相關文件</h2>
+<p>
+  <span class="pill">Artex_SIEM_偵測報告.md　技術完整版</span>
+  <span class="pill">ArcSight_相關性規則草稿.md　R0–R6 規則</span>
+</p>
+
+<p class="foot">本報告基於去識別化資料與靜態程式碼分析,屬行為推定(信心中高),非鐵證。內部參考文件。</p>
+
+</div>
+</body>
+</html>

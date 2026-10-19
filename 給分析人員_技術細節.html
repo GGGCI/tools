@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Artex / AI Agent 偵測 — 分析人員技術細節</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --card:#fff; --ink:#1a1d21; --muted:#5b6670; --line:#e2e6ea;
+    --brand:#1f4e79; --brand-soft:#eaf1f8; --accent:#7a3ea8; --accent-soft:#f1e9f8;
+    --ok:#1b7f4b; --ok-bg:#e7f5ec; --warn:#9a6b00; --warn-bg:#fcf3e0; --bad:#b4342b; --bad-bg:#fdecea;
+    --code-bg:#1e2733; --code-ink:#e6edf3; --maxw:1000px;
+  }
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+    --bg:#0f1317; --card:#171c22; --ink:#e7ebef; --muted:#9aa5b1; --line:#2a323b;
+    --brand:#6ea8dc; --brand-soft:#17222e; --accent:#c79be8; --accent-soft:#241a2e;
+    --ok:#5fd199; --ok-bg:#14271d; --warn:#e6bf5e; --warn-bg:#2a2112; --bad:#f0897f; --bad-bg:#2c1614;
+  }}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.72;font-size:16px;
+    font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:16px}
+  header.cover{background:linear-gradient(135deg,var(--brand),#163a5a);color:#fff;border-radius:16px;padding:30px 26px;margin:16px 0 20px}
+  header.cover .kicker{font-size:13px;letter-spacing:.14em;text-transform:uppercase;opacity:.85;margin:0 0 8px}
+  header.cover h1{font-size:26px;line-height:1.25;margin:0 0 12px;font-weight:800}
+  header.cover p{margin:6px 0;font-size:15px;opacity:.95}
+  nav.toc{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 20px;margin:14px 0}
+  nav.toc b{display:block;margin-bottom:8px;font-size:14px;color:var(--muted);letter-spacing:.05em}
+  nav.toc ol{margin:0;padding-left:20px;columns:2;column-gap:28px}
+  nav.toc a{color:var(--brand);text-decoration:none}
+  nav.toc a:hover{text-decoration:underline}
+  h2{font-size:22px;margin:38px 0 12px;padding-bottom:8px;border-bottom:2px solid var(--line);font-weight:800;scroll-margin-top:12px}
+  h3{font-size:18px;margin:24px 0 8px;color:var(--brand);font-weight:700}
+  h4{font-size:15px;margin:16px 0 6px;font-weight:700}
+  p{margin:10px 0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin:14px 0;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  ul,ol{margin:10px 0;padding-left:22px} li{margin:6px 0}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:var(--brand-soft);font-weight:700} tr:last-child td{border-bottom:0}
+  pre{background:var(--code-bg);color:var(--code-ink);border-radius:12px;padding:14px 16px;overflow:auto;font-size:12.5px;line-height:1.55;margin:10px 0}
+  code{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace}
+  pre code{color:inherit}
+  p code,li code,td code{background:var(--brand-soft);color:var(--ink);padding:1px 6px;border-radius:5px;font-size:13px}
+  .plain{background:var(--accent-soft);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:0 12px 12px 0;padding:12px 16px;margin:12px 0}
+  .plain .lbl{font-weight:800;color:var(--accent);font-size:13.5px;display:block;margin-bottom:4px;letter-spacing:.03em}
+  .evid{border-left:4px solid var(--brand);background:var(--brand-soft);padding:10px 14px;border-radius:0 10px 10px 0;margin:10px 0;font-size:14px}
+  .evid .lbl{font-weight:800;color:var(--brand);font-size:13px}
+  .code-why{border-left:4px solid var(--ok);background:var(--ok-bg);padding:8px 14px;border-radius:0 10px 10px 0;margin:8px 0 12px;font-size:13.5px}
+  .tag{display:inline-block;font-weight:800;border-radius:6px;padding:1px 8px;font-size:13px;white-space:nowrap}
+  .t-ok{color:var(--ok);background:var(--ok-bg)} .t-warn{color:var(--warn);background:var(--warn-bg)} .t-bad{color:var(--bad);background:var(--bad-bg)}
+  .pat{border:1px solid var(--line);border-radius:14px;padding:4px 20px 18px;margin:18px 0;background:var(--card)}
+  .pat .hd{display:flex;align-items:center;gap:10px;margin:16px 0 4px}
+  .pat .badge{background:var(--brand);color:#fff;font-weight:800;border-radius:8px;padding:3px 10px;font-size:14px}
+  .pat .star{color:#d79a00;font-weight:700;font-size:13px}
+  .glos{display:grid;grid-template-columns:140px 1fr;gap:4px 14px;font-size:14px}
+  .glos dt{font-weight:800;color:var(--brand)} .glos dd{margin:0 0 6px}
+  .foot{color:var(--muted);font-size:13px;margin:30px 0 10px;text-align:center}
+  @media(max-width:640px){nav.toc ol{columns:1} .glos{grid-template-columns:1fr}}
+  @media print{body{background:#fff;font-size:11.5pt}.wrap{max-width:none;padding:0}header.cover{background:#1f4e79!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}.card,table,pre,.evid,.plain,.pat{break-inside:avoid}nav.toc{display:none}th{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="cover">
+  <p class="kicker">分析人員技術文件 · 含新手白話解說</p>
+  <h1>Artex / AI Agent 攻擊偵測 — 技術細節</h1>
+  <p>把三份 SIEM log 的觀察、對應到 Artex 原始碼的機制、以及可落地的 ArcSight 規則,一次講清楚。</p>
+  <p>每個技術段落都附 <b style="color:#ffd27a">💡 白話解釋</b>,沒有資安背景也能看懂。</p>
+  <p style="opacity:.85;font-size:13.5px">日期 2026-10-19　·　資料:10/14、10/15、10/16 去識別化 log　·　標的:APP_A、APP_B</p>
+</header>
+
+<nav class="toc">
+  <b>目錄</b>
+  <ol>
+    <li><a href="#s0">0. 名詞速查(先看這個)</a></li>
+    <li><a href="#s1">1. 背景:AI agent 攻擊是什麼</a></li>
+    <li><a href="#s15">1.5 我憑什麼說是 AI(核心論證)</a></li>
+    <li><a href="#sdata">★ 資料來源的真相(必讀)</a></li>
+    <li><a href="#s2">2. 分析方法(可重現)</a></li>
+    <li><a href="#s3">3. 資料與標的盤點</a></li>
+    <li><a href="#s4">4. Artex 怎麼產生流量(含程式碼)</a></li>
+    <li><a href="#s5">5. 七個 pattern 逐條拆解</a></li>
+    <li><a href="#s6">6. 三者區分對照</a></li>
+    <li><a href="#s7">7. ArcSight 相關性規則 R0–R6</a></li>
+    <li><a href="#s8">8. 限制、信心與下一步</a></li>
+    <li><a href="#s9">附錄:欄位與重現指令</a></li>
+  </ol>
+</nav>
+
+<!-- ============ 0 ============ -->
+<h2 id="s0">0. 名詞速查(先看這個)</h2>
+<div class="card">
+<dl class="glos">
+  <dt>SIEM</dt><dd>資安事件集中管理平台。把防火牆、WAF、IPS 等各種設備的 log 收進來一起看。你手上這批就是從 SIEM(ArcSight)匯出的。</dd>
+  <dt>ArcSight</dt><dd>一套 SIEM 產品(本案的平台)。它有「相關性規則(correlation rule)」功能,可以把多條事件組合判斷。</dd>
+  <dt>FW / 防火牆</dt><dd>管「誰能連到誰、哪個埠」的設備。本案是 PAN-OS(Palo Alto)。</dd>
+  <dt>WAF</dt><dd>網站應用防火牆,專門看 HTTP 網頁請求、擋網頁攻擊。本案是 Imperva SecureSphere——它幫我們記下了網址、瀏覽器身分等細節。</dd>
+  <dt>IPS</dt><dd>入侵防禦系統,比對「攻擊特徵(簽章)」。本案是 Cisco Firepower。</dd>
+  <dt>User-Agent(UA)</dt><dd>每個瀏覽器/工具連線時的「自我介紹字串」,例如「我是 Windows 的 Chrome 126」。</dd>
+  <dt>LLM(大型語言模型)</dt><dd>像 ChatGPT 那種 AI 大腦。AI 攻擊工具靠它決定「下一步怎麼打」。</dd>
+  <dt>Payload</dt><dd>攻擊字串本身,例如一段想讓伺服器執行的惡意指令。</dd>
+  <dt>404</dt><dd>伺服器回「找不到這個網址」。掃描器亂猜網址時會製造大量 404。</dd>
+  <dt>Session / 連線</dt><dd>一次完整的來回連線。同一個人可同時開很多條。</dd>
+  <dt>egress(對外連線)</dt><dd>從某台機器「往外」連出去的流量。AI 攻擊工具要對外連 LLM 大腦,就是一種 egress。</dd>
+  <dt>MITM 側錄 proxy</dt><dd>中間人代理:把流量導過一個會記錄內容的中繼站,用來側錄瀏覽器做了什麼。Artex 內建這個來擷取自己的攻擊流量。</dd>
+</dl>
+</div>
+
+<!-- ============ 1 ============ -->
+<h2 id="s1">1. 背景:AI agent 攻擊是什麼</h2>
+<p>「AI agent(AI 代理)」是一種會自己做決定的攻擊程式。它不是照死腳本跑,而是:<b>看一下目標現況 → 問 AI 大腦(LLM)下一步 → 執行 → 再看 → 再問</b>,不斷循環,直到達成目標。Artex 就是這類工具(本案已知三份 log 是它打的)。</p>
+<div class="plain"><span class="lbl">💡 白話解釋</span>
+把它想成「一個不會累、會看說明書、還能同時分身的自動滲透員」。它和傳統掃描器最大的差別是<b>會思考、會隨現況調整</b>;和真人的差別是<b>它的思考有固定節奏、而且可以複製很多個一起做</b>。這兩個差別,正好在網路 log 上留下可偵測的痕跡。</div>
+
+<!-- ============ 資料來源真相 ============ -->
+<h2 id="sdata">★ 資料來源的真相(必讀,先搞懂這個再看證據)</h2>
+<div class="card" style="border-left:4px solid var(--bad)">
+<p>本案 SIEM <b>沒有收完整的 Web 存取紀錄(web access log)</b>。各設備的收錄範圍差很多,直接決定了「哪些證據可信、哪些有偏差」:</p>
+<table>
+  <tr><th>設備</th><th>收錄範圍</th><th>能給什麼</th><th>偏差</th></tr>
+  <tr><td><b>FW</b>(PAN-OS)</td><td><span class="tag t-ok">全收</span>每條連線都記</td><td>IP、埠、session、時間、流量(連線層)</td><td><b>無偏</b>,但沒有網址/UA/內容</td></tr>
+  <tr><td><b>WAF</b>(SecureSphere)</td><td><span class="tag t-bad">只在觸發規則時收</span></td><td>網址、UA、HTTP 方法、payload(內容層)</td><td><b>有偏、稀疏</b>:看不到「沒被擋」的請求</td></tr>
+  <tr><td><b>IPS</b>(Firepower)</td><td><span class="tag t-bad">只在命中簽章時收</span></td><td>攻擊簽章類別</td><td><b>有偏</b>:只有命中的那幾筆</td></tr>
+</table>
+<div class="plain"><span class="lbl">💡 白話解釋</span>想像你只有「保全『按下警報』的那幾個瞬間的錄影」,而不是整天的監視器。WAF/IPS 給的就是「警報瞬間」——只有觸發規則的請求才被記下來,<b>沒觸發的(例如正常枚舉、讀 JS、打一般 API)完全看不到</b>。只有 FW 像「門口的進出登記簿」,每個人進出都記,但只記「誰在幾點進出、待多久」,不記「他在裡面做了什麼」。</div>
+<p><b>這對我們的證據有三個直接後果:</b></p>
+<ol>
+  <li><b>真實的「請求節奏」要用 FW 算,不能只用 WAF。</b>WAF 事件之間的間隔是「兩次『觸發警報』之間」,不是「兩次請求之間」。還好我們<b>用完整的 FW 連線資料重算過</b>,10/14、10/15 的節奏依然成立(見 §1.5)。</li>
+  <li><b>「覆蓋率 / 404 比例」這類指標做不到。</b>因為看不到沒被擋的請求,無法計算「它總共打了多少、猜錯多少」。先前任何「404 很低」的說法在此<b>收回</b>。</li>
+  <li><b>10/16 這天特別弱:</b>它的 FW 幾乎只有連線結束(end)事件、沒有連線建立(start)事件,內容幾乎全靠 WAF(有偏)。所以 10/16 的判斷信心低於 10/14、10/15。</li>
+</ol>
+</div>
+
+<!-- ============ 1.5 核心論證 ============ -->
+<h2 id="s15">1.5 我憑什麼說是 AI,不是腳本或真人?(核心論證)</h2>
+<p>「一般攻擊者」只有兩種:<b>真人</b>,或<b>腳本/掃描器</b>。要主張是 AI agent,就必須同時排除這兩者。這一節把推理攤開,並誠實標明<b>哪些證據站在完整資料上、哪些只是推論</b>。</p>
+
+<h3>第一步:先承認——很多訊號其實分不出「AI vs 腳本」</h3>
+<p>下面這些<b>不能</b>當決定性證據,因為寫得好的腳本/掃描器也做得到:</p>
+<table>
+  <tr><th>訊號</th><th>腳本做得到嗎</th></tr>
+  <tr><td>輪換多個 User-Agent</td><td>✅(UA 清單輪播)</td></tr>
+  <tr><td>路徑變異繞過</td><td>✅ sqlmap tamper、ffuf</td></tr>
+  <tr><td>多框架 payload 齊射</td><td>✅ nuclei 就是把模板打一輪</td></tr>
+  <tr><td>高並發 / 重打狀態端點 / 「很規律」</td><td>✅ 掃描器更兇、更規律(固定 sleep)</td></tr>
+</table>
+<div class="plain"><span class="lbl">💡 白話解釋</span>只看這些,我頂多說「是自動化」,<b>不能說是 AI</b>。要分出 AI,得靠下面「兩個軸的交集」。</div>
+
+<h3>第二步:兩個軸的交集 = AI agent</h3>
+
+<h4>軸一　機器的「速度/規模」→ 排除真人　<span class="tag t-ok">站在完整 FW 資料上</span></h4>
+<p>用<b>全收的 FW 連線資料</b>(非 WAF 取樣)重算:</p>
+<ul>
+  <li>10.14:連線建立 649 次,中位間隔 <b>3 秒</b>,爆發群 83 個(最大一群 190 條連線)。</li>
+  <li>10.15:連線建立 662 次,中位間隔 <b>3 秒</b>,爆發群 69 個。</li>
+  <li>同時維持多條並行連線。</li>
+</ul>
+<div class="evid"><span class="lbl">為什麼排除真人:</span>真人的手不可能用 3 秒中位間隔持續建立數百條連線、又同時維持多線。這一軸是<b>完整資料、最硬</b>。(10.16 FW 缺 start 事件,此軸較弱。)</div>
+
+<h4>軸二　人類式的「隨機應變」→ 排除腳本</h4>
+<p><b>(a) 停頓是「可變思考時間」,不是固定 sleep。</b> 完整 FW 資料的停頓:</p>
+<table>
+  <tr><th></th><th>10.14(FW)</th><th>10.15(FW)</th></tr>
+  <tr><td>不同的停頓秒數</td><td>54 種</td><td>50 種</td></tr>
+  <tr><td>變異係數 CV</td><td>6.64</td><td>6.06</td></tr>
+</table>
+<div class="evid"><span class="lbl">為什麼排除腳本:</span>固定 sleep 的腳本停頓會是 <b>1~2 種值、CV≈0</b>;零延遲掃描器則<b>沒有</b>這段停頓。這裡有 50+ 種值、CV 高達 6,且分佈是「一叢短停頓 + 長尾」——符合「想得多就停得久」的可變推理時間。</div>
+
+<p><b>(b) 它打的是「從剛讀到的內容才知道」的 app 專屬端點。</b>★ 最難偽造,但也最受資料限制</p>
+<p>WAF 記到的觸發請求裡,有 <code>users-online-counter</code>、<code>/common/sendlogindata</code> 這種<b>任何通用字典都沒有</b>的 app 專屬路徑,且前面有抓 JS 的動作。腳本靠「預先寫死的字典/模板」,不會因為「剛讀到什麼」而改打什麼。</p>
+<div class="evid" style="border-left-color:var(--warn);background:var(--warn-bg)"><span class="lbl" style="color:var(--warn)">⚠️ 誠實標註(資料限制):</span>這一點我<b>無法 100% 證明</b>。因為 WAF 只記觸發規則的請求(見「資料來源的真相」),我看不到完整請求流,<b>無法證明「這個請求確實是被上一個回應的內容觸發的」,也無法算 404/字典比例</b>。這些 app 專屬路徑「確實出現過」是事實,但「它是讀懂後才打的」目前是<b>強推論,不是實證</b>。要變實證,需要 response 關聯或 referer 鏈。</div>
+
+<p><b>(c) 遇阻即時換對應手法</b>(被擋 → 換出對應的繞過寫法,非照清單盲跑)。同樣只看得到觸發的那幾筆,屬佐證。</p>
+
+<h3>第三步:四方對照(加入「進階流水線」才誠實)</h3>
+<div class="plain" style="border-left-color:var(--bad);background:var(--bad-bg)"><span class="lbl" style="color:var(--bad)">⚠️ 重要修正</span>我原本寫「只有 AI 兩軸同時有」。<b>這過強,已修正。</b>除了真人和簡易腳本,還有第四種對手:<b>進階自動化流水線</b>(crawler → endpoint extractor → scanner → OAST + 非同步 worker + jitter/backoff)。它<b>兩軸都有</b>——速度/規模有、連「讀了再打、遇阻變形」的適應性也部分有。所以兩軸交集真正排除的是<b>真人與簡易腳本</b>,<b>排不掉進階流水線</b>。</div>
+<table>
+  <tr><th>判準</th><th>真人</th><th>簡易腳本</th><th>進階流水線</th><th>AI agent</th><th>本案</th></tr>
+  <tr><td>3 秒中位建連線、多線並行(軸一)</td><td>❌</td><td>✅</td><td>✅</td><td>✅</td><td><span class="tag t-ok">FW 證實</span></td></tr>
+  <tr><td>停頓=批次+等待(非固定 sleep)</td><td>—</td><td>❌</td><td>✅(backoff/頁面等待)</td><td>✅</td><td><span class="tag t-ok">FW 證實</span></td></tr>
+  <tr><td>打 app 專屬端點(先讀後打)</td><td>❌</td><td>❌</td><td>✅(JS extractor)</td><td>✅</td><td><span class="tag t-warn">推論</span></td></tr>
+  <tr><td>遇阻換變形</td><td>✅慢</td><td>❌</td><td>✅(tamper)</td><td>✅</td><td><span class="tag t-warn">佐證</span></td></tr>
+  <tr><td><b>結論</b></td><td>缺軸一</td><td>缺右三</td><td colspan="2"><b>兩者在 SIEM 上幾乎無法分</b></td><td></td></tr>
+</table>
+<div class="plain"><span class="lbl">💡 所以能下的結論是</span>這批活動是「<b>非真人、高度自動化、具目標適應能力的 agent-like 活動</b>」,且<b>與 Artex 架構相容</b>(本次已知來源就是 Artex)。但「<b>它一定是 AI 而非進階流水線</b>」——SIEM 單獨<b>證不到</b>。</div>
+
+<h3>第四步:那「AI vs 進階流水線」到底靠什麼分?</h3>
+<p>靠 SIEM 看不到的東西,只有這些能真正把線劃清(見 §8):</p>
+<ol>
+  <li><b>Response 驅動因果:</b>後續請求用到「<b>只有前一個回應才出現</b>」的隨機 endpoint / 自訂參數名 / 一次性 token。這能把「<b>適應式</b>」和「固定模板」分開。<br><span style="color:var(--muted);font-size:13.5px">⚠️ 但注意:這只證明「會看回應調整」,<b>不等於 LLM</b>——有回饋迴圈的進階 scanner 也可能部分通過。</span></li>
+  <li><b>Artex 內部 telemetry 對時(最強、且能指名 Artex):</b>讓 Artex 帶 <code>X-ARTEX-Run/Task/Tool-ID</code>,把內部事件↔網路事件一對一對上。這才能把「停頓=某次 LLM 推理」從<b>架構相容</b>升級成<b>因果</b>。</li>
+</ol>
+<div class="plain" style="border-left-color:var(--warn);background:var(--warn-bg)"><span class="lbl" style="color:var(--warn)">誠實的綜合判定</span>
+<b>已確認:</b>非真人、高度自動化、多階段、目標適應(FW 完整證實速度/規模與可變停頓)。<br>
+<b>已知來源=Artex</b>(本次測試標註),可作行為基準;行為與 Artex 架構相容。<br>
+<b>未達成:</b>對「未知來源」強歸因為 AI/Artex——需上面 1、2 的因果證據。<br>
+<b>信心:中高</b>(限 agent-like 層級;10.14/15 較高、10.16 較弱)。</div>
+
+<!-- ============ 2 ============ -->
+<h2 id="s2">2. 分析方法(可重現)</h2>
+<ol>
+  <li>讀 Artex 原始碼,搞清楚它「怎麼發請求、怎麼計時」——這是痕跡的來源。</li>
+  <li>把三份 log 用 Python 解析,抽出:時間、來源 IP、目標、網址、HTTP 方法、User-Agent、各種判斷欄位。</li>
+  <li>把「有網址的 WAF 事件」依時間排序,計算節奏(爆發、停頓);統計 UA 種類;分類網址(API/敏感路徑/JS 檔);找繞過變形與攻擊字串。</li>
+  <li>把每個觀察對回 Artex 的程式碼機制,再轉成偵測規則。</li>
+</ol>
+<div class="plain"><span class="lbl">💡 白話解釋</span>我們沒有「猜」,是先看工具的程式碼知道它會怎麼動,再回頭在 log 裡找對應的腳印,兩邊對得上才下結論。附錄有重現用的欄位與邏輯。</div>
+
+<!-- ============ 3 ============ -->
+<h2 id="s3">3. 資料與標的盤點</h2>
+<p style="color:var(--muted);font-size:14px">注意:下表「可分析的 HTTP 請求」指<b>被 WAF 觸發而記錄</b>的請求數,<b>不是</b>總請求數(SIEM 未收完整 web log,見「資料來源的真相」)。</p>
+<table>
+  <tr><th>Log</th><th>攻擊來源 IP</th><th>主要標的</th><th>時間跨度</th><th>WAF 觸發的 HTTP 請求</th></tr>
+  <tr><td>10.14</td><td><code>198.51.100.11</code></td><td><code>10.250.10.19</code>(APP_A)</td><td>~288 分</td><td>977</td></tr>
+  <tr><td>10.15</td><td><code>198.51.100.12</code></td><td><code>10.250.10.19</code>(APP_A,同標的)</td><td>~152 分</td><td>997</td></tr>
+  <tr><td>10.16</td><td><code>198.51.100.13</code></td><td><code>203.0.113.22</code>(APP_B)等多主機+閘道</td><td>~704 分</td><td>1135</td></tr>
+</table>
+<div class="plain"><span class="lbl">💡 白話解釋</span>10/14 和 10/15 在打同一台(APP_A),連兩天。10/16 換打另一組系統(APP_B),而且一次掃了好幾台+閘道——這種「一口氣掃一整片」是自動化工具的典型。</div>
+
+<!-- ============ 4 ============ -->
+<h2 id="s4">4. Artex 怎麼產生流量(含程式碼)</h2>
+<table>
+  <tr><th>機制</th><th>原始碼位置</th><th>一句話</th></tr>
+  <tr><td>多代理+並發 worker</td><td><code>server/conversations.go:587</code></td><td>可同時 ≤5 條攻擊線並行</td></tr>
+  <tr><td>看→想→做 迴圈</td><td><code>agent/deferred.go</code>、<code>server/engine.go</code></td><td>一次「想」會回一批動作</td></tr>
+  <tr><td>用瀏覽器/掃描器/自訂工具打</td><td><code>db/db.go:249</code>、<code>server/customtool.go:444</code></td><td>攻擊流量不是純 Go,是 Playwright+curl+掃描器</td></tr>
+  <tr><td>連 LLM 大腦</td><td><code>agent/provider.go</code></td><td>每「想」一次=對外連 LLM 一次,預設模型 <code>claude-opus-4-8</code></td></tr>
+  <tr><td>自身誠實 UA</td><td><code>enrich/enrich.go:233</code></td><td><code>artex-enrich/1.0</code>(只在工具自己對外,不在目標側)</td></tr>
+  <tr><td>行為範本(技能)</td><td><code>skills/api-recon</code> 等</td><td>定義「先抓 JS→枚舉介面→參數矩陣」打法</td></tr>
+</table>
+<div class="plain"><span class="lbl">💡 白話解釋</span>記住這條因果鏈就懂全部了:<b>停頓=在等 AI 大腦回答;一小批請求=大腦一次叫它做的事;多條線=它開了分身;UA 很雜=它用了瀏覽器+curl+掃描器三種嘴巴講話。</b></div>
+
+<!-- ============ 5 ============ -->
+<h2 id="s5">5. 七個 pattern 逐條拆解</h2>
+<div class="plain" style="border-left-color:var(--warn);background:var(--warn-bg)"><span class="lbl" style="color:var(--warn)">讀法提醒</span>以下每個 pattern 都是「<b>與 Artex 架構相容</b>」的行為證據(L2),<b>不是</b>「已證明由某段 Artex 程式碼直接造成」(L3)。而且除了真人/簡易腳本,<b>進階自動化流水線</b>也能產生多數 pattern(見 §1.5)。請把它們當「agent-like 可疑度」的加分項,不是「AI 鐵證」。</div>
+
+<div class="pat">
+  <div class="hd"><span class="badge">P1</span><b>「想一下、打一批」的節奏</b><span class="star">★ 最強訊號</span></div>
+  <div class="plain"><span class="lbl">💡 白話解釋</span>AI 每做一個動作前都要「問一次大腦」,問一次要等好幾秒。所以它的攻擊變成「打一下 → 等大腦(停頓) → 再打一下」。我們看到<b>打一小批(2~5 個、幾乎同一秒)→ 停約 17~20 秒 → 再一批</b>,重複上百次。真人節奏雜亂、掃描器一路狂衝不停,只有 AI 會這樣規律地停下來「想」。</div>
+  <h4>log 證據</h4>
+  <p style="font-size:13.5px;color:var(--muted)">下表是 <b>WAF 觸發事件</b>算出的(有偏、稀疏)。真實節奏請以 §1.5 的<b>完整 FW 連線資料</b>為準——FW 證實 10.14/15 連線建立中位間隔 3 秒、有爆發群、停頓 CV 6.0~6.6。此處 WAF 數字僅作「警報瞬間」的佐證。</p>
+  <table>
+    <tr><th>指標(WAF 觸發事件,有偏)</th><th>10.14</th><th>10.15</th><th>10.16</th></tr>
+    <tr><td>爆發群數(以 ≥10s 間隔切群)</td><td>123</td><td>120</td><td>285</td></tr>
+    <tr><td>每群請求中位數</td><td>4</td><td>5</td><td>2</td></tr>
+    <tr><td>群間停頓中位數</td><td>17s</td><td>19s</td><td>20s</td></tr>
+    <tr><td>同一秒內請求占比</td><td>65%</td><td>63%</td><td>45%</td></tr>
+  </table>
+  <h4>對應 Artex 程式碼</h4>
+  <pre><code>// agent/deferred.go — 一則 LLM 回應可含「多個」工具呼叫 → 批次執行(造成同秒微爆發)
+for _, b := range m.ToolUses() { ... }
+
+// agent/provider.go — 連 LLM 端點(預設 Anthropic 格式、streaming);等它回應 = 停頓
+default:
+    c.Format = llm.FormatAnthropic         // provider appends "/v1/messages"
+    if c.Model == "" { c.Model = "claude-opus-4-8" }  // 推理延遲 ≈ 停頓 17~20s</code></pre>
+  <div class="code-why"><b>為什麼對得上:</b>「一次回一批動作」=同秒微爆發;「等大腦回答」=17~20 秒停頓。兩個程式行為剛好拼出 log 看到的節拍。</div>
+</div>
+
+<div class="pat">
+  <div class="hd"><span class="badge">P2</span><b>單一來源冒出多種、還假造的 User-Agent</b></div>
+  <div class="plain"><span class="lbl">💡 白話解釋</span>User-Agent 是瀏覽器的「自我介紹」。正常人開一個瀏覽器,從頭到尾都講同一句。但這次同一個 IP 講了 7~11 種不同介紹,還有<b>物理上不存在的版本</b>(等於拿假證件)。這只有「程式在拼裝、偽裝」才會發生。</div>
+  <h4>log 證據(欄位:<code>requestClientApplication</code>)</h4>
+  <ul>
+    <li>distinct UA 數:10.14=<b>10</b>、10.15=<b>7</b>、10.16=<b>11</b></li>
+    <li>假造/畸形樣本:<code>Chrome/126.0 Safari/126.0</code>(Safari 版號抄 Chrome,不可能)、<code>Chrome/155.0.0.0</code>(當時不存在的版本)、<code>Chrome/134.0.6998.35/36</code>(雙 build number)、截斷的 <code>Mozilla/5.0</code></li>
+    <li>工具類 UA:<code>curl/7.88.1</code>、<code>i305-probe</code>、<code>norma/0.4</code></li>
+  </ul>
+  <h4>對應 Artex 程式碼</h4>
+  <pre><code>// db/db.go — 內建無頭瀏覽器 MCP(預設關閉,操作者啟用;擷取時走側錄 proxy)
+VALUES ('browser','stdio','npx', $1, '{}', false)   //  ["@playwright/mcp","--headless"]
+
+// server/customtool.go — 自訂 HTTP 工具,可走側錄 proxy
+client := &http.Client{Timeout: timeoutOr(spec.TimeoutMs, 30000)}
+if tr := s.httpProxyTransport(spec); tr != nil { client.Transport = tr }</code></pre>
+  <div class="code-why"><b>為什麼對得上:</b>瀏覽器(Playwright)給 Chrome UA、自訂工具/掃描器給 curl 類 UA——三種「嘴巴」共用同一台機器,所以同一個 IP 的 UA 才會這麼雜。</div>
+</div>
+
+<div class="pat">
+  <div class="hd"><span class="badge">P3</span><b>先讀懂再精準打(語意覆蓋),不是亂猜</b></div>
+  <div class="plain"><span class="lbl">💡 白話解釋</span>網站的前端程式碼(JavaScript)像一張藏寶圖,寫了所有後台入口。傳統掃描器不看圖,拿「常見網址字典」一個個硬猜,大多猜錯留下一堆 404。這個 AI 會<b>先把藏寶圖抓下來讀懂,直接走到真的入口</b>,所以它打的幾乎都是真實存在的功能。</div>
+  <h4>log 證據(欄位:<code>requestUrl</code>、<code>analysisEndpointCategory</code>)</h4>
+  <ul>
+    <li>抓 JS 檔:10.14 有 53 個 <code>.js</code> 請求,含 <code>/dist/main.&lt;hash&gt;.js</code></li>
+    <li>精準重打真實 API:<code>users-online-counter</code>(368/487 次)、<code>/servlet/openfile</code>、<code>/common/sendlogindata</code></li>
+    <li>敏感路徑命中:10.14=346、10.15=332、10.16=235(<code>/.git/head</code>、<code>/web.config</code>、<code>/trace.axd</code> 等)</li>
+  </ul>
+  <h4>對應 Artex</h4>
+  <p>內建技能 <code>skills/api-recon/</code>:先用 <code>harvest_static.py</code> 下載整站 JS、解析真實後端介面,再由瀏覽器觸發枚舉(Phase 1~3)。</p>
+  <div class="code-why" style="border-left-color:var(--warn);background:var(--warn-bg)"><b>⚠️ 誠實修正:</b>我原本想用「404 比例低」來和掃描器區分,但<b>此法在本案做不到</b>——WAF 只記觸發規則的請求,看不到完整請求流,無從計算 404/字典比例。可用的是:這些 app 專屬、非字典的真實路徑「確實出現過」+ 前面有抓 JS,屬<b>強推論</b>(非實證)。詳見 §1.5(b)。</div>
+</div>
+
+<div class="pat">
+  <div class="hd"><span class="badge">P4</span><b>系統化換寫法繞過(路徑變異)</b></div>
+  <div class="plain"><span class="lbl">💡 白話解釋</span>WAF 會擋某些網址。它被擋後把同一個網址「換個寫法」再試:多個斜線 <code>//</code>、加 <code>/./</code>、中間插 <code>;x=1</code>。對電腦指到同一處,卻可能騙過防火牆。它一種一種系統化地試,是自動化在找破綻。</div>
+  <h4>log 證據(欄位:<code>analysisIsPathMutation</code>、<code>requestUrl</code>)</h4>
+  <ul>
+    <li><code>analysisIsPathMutation=True</code>:10.14=25、10.15=33、10.16=36</li>
+    <li>樣本:<code>/APP_A/servlet/../servlet/openfile</code>、<code>/APP_A//servlet/openfile</code>、<code>/APP_A/./servlet/openfile</code>、<code>/;jsessionid=.../servlet/openfile</code>、<code>/servlet/openfile;x=1</code></li>
+  </ul>
+  <div class="code-why"><b>對應 Artex:</b>agent 迴圈「這步被擋 → 下一 turn 換個編碼再試」的自適應行為(非人手零星測試)。</div>
+</div>
+
+<div class="pat">
+  <div class="hd"><span class="badge">P5</span><b>一次灑多種框架的攻擊(跨框架 payload)</b></div>
+  <div class="plain"><span class="lbl">💡 白話解釋</span>不同網站用不同技術蓋的(Java 的 Struts/Log4j、微軟 .NET…),各有各的攻擊法。真人通常先判斷你用哪種再出手;這個 AI 在短時間內把各種攻擊法全丟一輪,哪個中算賺到——這是機器才有的「廣度優先」。</div>
+  <h4>log 證據(欄位:<code>requestMethod</code> 內的字串 + Firepower 簽章)</h4>
+  <ul>
+    <li>payload:<code>${sys:java.version}</code>(Log4Shell)、<code>%{(#_=1)}</code>/<code>--%{7*7}</code>(Struts2 OGNL)、<code>PROPFIND</code>(WebDAV)、<code>gEt</code>(大小寫變造)</li>
+    <li>Firepower INTRUSION 簽章共現:<code>400:1:58744</code>(61 次)、<code>58742</code>、<code>58723</code>、<code>58737</code>…</li>
+  </ul>
+  <div class="code-why"><b>對應 Artex:</b>多 worker 並發 + planner 分派(<code>server/conversations.go</code>、<code>agent/planner.go</code>),對同標的廣度優先嘗試多類弱點。</div>
+</div>
+
+<div class="pat">
+  <div class="hd"><span class="badge">P6</span><b>每做幾步就回頭看狀態(re-poll)</b></div>
+  <div class="plain"><span class="lbl">💡 白話解釋</span>它每做幾個動作就重打同一個「狀態查詢」網址幾百次——像一個人每走一步都先確認「我現在在哪、登入了沒」。這是程式迴圈的特性,人不會這樣。</div>
+  <div class="evid"><span class="lbl">log 證據:</span><code>users-online-counter</code> 在 10.14 被打 368 次、10.15 被打 487 次,遠高於其他端點且散佈全程。對應 <code>agent/worker.go</code> 迴圈的「觀察步」+ 瀏覽器輪詢。</div>
+</div>
+
+<div class="pat">
+  <div class="hd"><span class="badge">P7</span><b>同時開多條會思考的攻擊線(並發)</b></div>
+  <div class="plain"><span class="lbl">💡 白話解釋</span>它最多可同時開 5 條攻擊線一起打,每條各自有自己的「問大腦」節奏。人只有一條線;傳統掃描器開很多條但每條一模一樣、不會各自思考。所以我們看到同一個 IP 同時有好幾串「各自有節奏」的請求。</div>
+  <div class="evid"><span class="lbl">log 證據:</span>同一來源同標的同時數條並行 session(PAN-OS session 欄位)。對應 <code>server/conversations.go:587</code> 的 <code>maxParallel: 5</code>。</div>
+</div>
+
+<!-- ============ 6 ============ -->
+<h2 id="s6">6. 三者區分對照</h2>
+<table>
+  <tr><th>面向</th><th>一般攻擊者(人)</th><th>傳統掃描器</th><th>AI 代理(Artex)</th><th>本資料</th></tr>
+  <tr><td>計時</td><td>不規律</td><td>穩定高速、無停頓</td><td><b>微爆發↔10–25s 推理停頓</b></td><td>P1 ✔</td></tr>
+  <tr><td>UA</td><td>單一穩定</td><td>單一工具</td><td><b>多種+畸形</b></td><td>P2 ✔</td></tr>
+  <tr><td>覆蓋</td><td>探索</td><td>字典暴力(404 高)</td><td><b>先讀 JS 再精準打</b></td><td>P3 ✔</td></tr>
+  <tr><td>繞過</td><td>手動少量</td><td>固定規則</td><td><b>系統化變形</b></td><td>P4 ✔</td></tr>
+  <tr><td>攻擊面</td><td>聚焦</td><td>單技術平掃</td><td><b>跨框架+多標的</b></td><td>P5 ✔</td></tr>
+  <tr><td>狀態</td><td>不管</td><td>無</td><td><b>每輪 re-poll</b></td><td>P6 ✔</td></tr>
+  <tr><td>流結構</td><td>1 流</td><td>N 條均勻</td><td><b>≤5 條各自節奏</b></td><td>P7 ✔</td></tr>
+</table>
+<div class="plain" style="border-left-color:var(--bad);background:var(--bad-bg)"><span class="lbl" style="color:var(--bad)">⚠️ 修正(原說法過強)</span>我原本寫「七列同時成立就幾乎只剩 AI」。<b>這不對,已收回。</b>七列同時成立能證明的是「<b>多工具、多階段、具目標適應能力的整合式自動化平台</b>」——這也涵蓋了<b>進階流水線</b>(見 §1.5 第三步),不是只剩 AI。要再跨到「AI」,至少需一項 <b>response 驅動因果證據</b>。加權合分的意義是「提高 agent-like 可疑度」,不是「算出 AI 機率」。</div>
+
+<!-- ============ 7 ============ -->
+<h2 id="s7">7. ArcSight 相關性規則 R0–R6</h2>
+<div class="plain"><span class="lbl">💡 白話解釋</span>這是可實作的「邏輯草稿」,不是能直接匯入的檔案。做法:R1~R6 各自抓一種行為、各給分數寫進一張清單(Active List);R0 把分數加總,夠高就告警。<b>關鍵是「合分」:一條規則會誤報,多條一起中才準。</b></div>
+
+<h3>R0 — 加權合分與<b>分級</b>判定</h3>
+<div class="plain"><span class="lbl">💡 修訂</span>R0 <b>不直接判「AI Agent Detected」</b>,改分級:<code>自動化偵察</code>(3–4)→<code>疑似適應式自動化</code>(≥5)→<code>高信心 response 驅動 agent-like</code>(≥5 且有因果)→<code>已知 Artex</code>(有內部 telemetry 對時)。分數=agent-like 可疑度,非 AI 機率。</div>
+<p>同一(來源, 標的)在 1 小時內累計分數:<b>R1=3、R3=2、R6=2、R2=1、R4=1、R5=1</b>。總分 ≥5 → <span class="tag t-bad">High</span>;3–4 → <span class="tag t-warn">Medium</span>。動作:產生關聯事件、升 priority、寫入觀察名單。</p>
+
+<h3>R1 — Burst-and-Pause 自動化活動 <span class="tag t-bad">權重 3</span></h3>
+<div class="plain"><span class="lbl">💡</span>原名「Turn 節奏」已改。這條抓「批次+等待交替」的自動化型態,<b>不等於 LLM 推理</b>(停頓也可能來自頁面等待、OAST 輪詢、backoff)。主資料源用<b>完整 FW 連線</b>,非 WAF。</div>
+<p><b>抓什麼:</b>「打一批→停 10–25 秒→再打」重複。<b>資料:</b>WAF,Group By 來源+標的,10 分鐘窗。<b>門檻:</b>符合「同秒≥2 筆的微爆發 → 10–25s 停頓」交替 ≥6 次,且同秒占比 ≥40%。<b>實作:</b>aggregation 計同秒簇 + Data Monitor 看 inter-arrival 是否雙峰(次秒峰+10–25s 峰)。<b>誤報調校:</b>排除健康檢查、監控探針、CDN。</p>
+<div class="plain"><span class="lbl">💡 白話</span>這條就是抓「機器在想」的呼吸節奏,最難偽造,所以給最高分。</div>
+
+<h3>R2 — 多工具 / UA 輪替 <span class="tag t-warn">權重 1</span></h3>
+<div class="plain"><span class="lbl">💡</span>證明多工具/偽裝,<b>不證明 AI</b>。「畸形版本」須比對事件當日實際 Chrome 版本,勿憑直覺。</div>
+<p><b>抓什麼:</b>同一來源短時間內用太多種 UA,或用了假造 UA。<b>門檻:</b>1 小時內 distinct UA ≥5,或命中畸形正則。</p>
+<pre><code>Safari/1[23][0-9]\b            # Safari 版號抄 Chrome(不可能)
+Chrome/1[5-9][0-9]\.          # 不存在的過高 Chrome 主版本
+Chrome/[0-9.]+/[0-9]          # 雙 build number,如 134.0.6998.35/36
+^Mozilla/5\.0\s*(\(.*\))?\s*$ # 截斷、無 AppleWebKit 的殘缺 UA
+^(curl|cURL|i305-probe|norma/) # 工具 UA 與瀏覽器 UA 同源共現</code></pre>
+<p><b>誤報調校:</b>內網 NAT 出口(很多人共用一個 IP)會抬高 UA 數 → 對內網放寬、對外部單源從嚴。</p>
+
+<h3>R3 — 前端探索 → app 專屬探測 <span class="tag t-warn">權重 2</span></h3>
+<div class="plain"><span class="lbl">💡</span>證明「探索後接探測」的整合工作流,<b>不等於 LLM 理解</b>;<b>不得</b>用 404 比例(收不到未觸發請求)。</div>
+<p><b>抓什麼:</b>先抓一堆 JS、又精準打一堆真實 API,而且 404 比例低(不是字典暴力)。<b>門檻:</b><code>.js</code> ≥10 且 <code>analysisEndpointCategory ∈ {Application API, File Access}</code> 的 distinct 路徑 ≥15,之後重複命中這些路徑;可加「404 比例 &lt; 30%」。</p>
+
+<h3>R4 — 系統化 Endpoint 變形 <span class="tag t-warn">權重 1</span></h3>
+<div class="plain"><span class="lbl">💡</span>要當 agent 證據,需加「前一請求被擋後才出現對應新變形、順序隨結果改變」的序列條件;否則只是繞過字典。</div>
+<p><b>門檻:</b>1 小時內 <code>analysisIsPathMutation=True</code> ≥10,或網址命中變形正則 ≥10。</p>
+<pre><code>(/\.\./)|(//)|(/\./)|(;jsessionid=)|(;x=\d)</code></pre>
+
+<h3>R5 — 多技術類型弱點掃描 <span class="tag t-warn">權重 1</span></h3>
+<div class="plain"><span class="lbl">💡</span>最像「多模板批次」,<b>非 AI 專屬</b>;維持低權重,<b>不得</b>與 R1 相加判 High。</div>
+<p><b>門檻:</b>同來源 1 小時內觸發 ≥2 個不同框架類別的攻擊訊號(Struts/OGNL、Log4j/JNDI、WebDAV、SQLi、反序列化)。<b>升級:</b>若同時 R1 命中 → R0 直接判 High。</p>
+<pre><code>\$\{(jndi|sys|env|lower|upper):   # Log4Shell / JNDI
+%\{.*\}                           # Struts2 OGNL
+#_=                               # OGNL context
+\b7\*7\b                          # 探測運算
+\bPROPFIND\b                      # WebDAV
+(?i)\bunion\b.*\bselect\b         # SQLi</code></pre>
+
+<h3>R6 — 高頻 Endpoint 輪詢 + 並發 <span class="tag t-bad">權重 2</span></h3>
+<div class="plain"><span class="lbl">💡</span>高頻狀態端點也可能是 SPA 輪詢/heartbeat,<b>非必為 Worker 觀察</b>;並發證明平行,不證明「每條線在思考」。</div>
+<p><b>R6a(re-poll):</b>單一狀態端點(<code>*online-counter*</code>、<code>*status*</code>、<code>*/home/index</code>)占該來源請求 ≥25% 且跨 ≥30 分鐘。<b>R6b(並發):</b>同來源同標的同時 2–5 條 session,各自呈 R1 節奏。</p>
+
+<div class="card">
+<h4>Active List 結構(給實作者)</h4>
+<table>
+  <tr><th>名稱</th><th>Key</th><th>內容</th><th>TTL</th></tr>
+  <tr><td><code>AI_Agent_Scores</code></td><td>sourceAddress + destinationAddress</td><td>ruleHits、score、firstSeen、lastSeen</td><td>2h</td></tr>
+  <tr><td><code>AI_Agent_Watchlist</code></td><td>sourceAddress</td><td>verdict、score、destinations</td><td>24h</td></tr>
+</table>
+</div>
+
+<h3>要指名「就是 Artex」(二階比對)</h3>
+<p>R0 判定「是 AI 代理」後,再比對 Artex 專屬指紋:Playwright Chromium 的 UA 集合、ScopeSentry 掃描模組順序(<code>SubdomainScan→PortScan→…</code>)、<code>claude-opus-4-8</code> 的停頓延遲帶、<code>insert_assets</code> 行為。純網路層只能到「是 AI 代理」;指名 Artex 需實驗室基準。</p>
+
+<!-- ============ 8 ============ -->
+<h2 id="s8">8. 限制、信心與下一步</h2>
+<div class="card" style="border-left:4px solid var(--bad)"><b>最大限制:SIEM 未收完整 web log。</b> WAF/IPS 只在觸發規則時才記錄,只有 FW 全收(見「資料來源的真相」)。因此:內容層(網址/UA/payload)是<b>有偏、稀疏</b>的樣本,無法算覆蓋率/404 比例;真實請求節奏須靠 FW 連線資料(已重算,10.14/15 成立;10.16 因 FW 缺 start 事件而弱)。<b>補完整 web access log(或至少對這些來源全量收 WAF/反向代理日誌)是把信心推到「高」最關鍵的一步。</b></div>
+<table>
+  <tr><th>狀態</th><th>內容</th></tr>
+  <tr><td><span class="tag t-ok">能做</span></td><td>R2/R3/R4/R5/R6 用現有欄位即可上線;R1 先上「秒級近似版」;用這三份已知樣本校準門檻。</td></tr>
+  <tr><td><span class="tag t-warn">有限</span></td><td>時間戳只到「秒」→ R1 算不到毫秒節拍;可分析事件量偏少(每天約 1000)→ 門檻需多天校準;<code>requestMethod</code> 欄位品質不穩;<code>analysis*</code> 須確認有映射進 ESM。</td></tr>
+  <tr><td><span class="tag t-bad">做不到</span></td><td><b>看不到沒觸發規則的請求</b>(WAF/IPS 只收觸發事件)→ 無法算真實覆蓋率/404;看不到攻擊端連 LLM 的 egress(在網路外);無封包→無 TLS/JA3 指紋;無法毫秒精度;網路 log 無法指名 Artex;這批是離線 CSV→尚非即時阻斷。</td></tr>
+</table>
+<p><b>信心:中高</b>,且僅限「<b>agent-like 適應式自動化</b>」層級——非真人、高度自動化這點很硬(FW 完整);「<b>一定是 AI 而非進階流水線</b>」尚未達成。</p>
+
+<h3>證據分三層(避免過度歸因)</h3>
+<table>
+  <tr><th>層級</th><th>內容</th><th>本案狀態</th></tr>
+  <tr><td><b>L1 已確認事實</b></td><td>高度自動化、多工具/多 UA、大量並行、前端探索→app 專屬端點、路徑變形、多框架 payload;10/14・15 同標的不同來源、10/16 新標的;<b>本次來源已知=Artex</b></td><td><span class="tag t-ok">成立</span></td></tr>
+  <tr><td><b>L2 架構相容</b></td><td>上述行為「可由 Artex 的 LLM/並行 Worker/批次 Tool Call/Playwright/ScopeSentry 解釋」</td><td><span class="tag t-ok">相容(非因果)</span></td></tr>
+  <tr><td><b>L3 需因果證明</b></td><td>某停頓=某次 LLM 推理;某 burst=某次 ToolUses;某 session=某 Tool Call;某 endpoint 由前一 response 新發現;某變形因前一請求被擋;某組並行=N 個獨立 Worker</td><td><span class="tag t-bad">未達成</span></td></tr>
+</table>
+<p style="font-size:14px">用詞原則:L2 一律用「<b>相容/吻合/可由該架構解釋</b>」,不用「已證明由該程式碼路徑造成」。</p>
+
+<h3>下一步(把 L2 升級到 L3)</h3>
+<ol>
+  <li><b>V1 response 驅動測試:</b>靶機回傳公開字典不可能有的動態資料(隨機 endpoint/參數名/一次性 token/動態 method),看來源是否據此修正下一請求 → 分開「適應式」與「固定模板」。<span style="color:var(--muted)">(⚠️ 只證適應性,不等於 LLM。)</span></li>
+  <li><b>V2 Artex 內部 telemetry 對時(最強、能指名 Artex):</b>帶 <code>X-ARTEX-Run/Task/Tool-ID</code>,把 Artex 內部事件↔Proxy↔Target↔WAF/IPS↔ArcSight 一對一對上。</li>
+  <li><b>V3 基準比較:</b>同靶機由 Artex / Nuclei / Burp / crawler+scanner / 真人 分別跑,比 inter-arrival、burst 形狀、endpoint 發現鏈、工具切換、變形順序、response 驅動修正、並行分支差異。</li>
+  <li>補完整 web access log;提高時間精度;開 TLS/JA3 指紋擷取(或加 Zeek/Suricata)。</li>
+</ol>
+
+<!-- ============ 9 ============ -->
+<h2 id="s9">附錄:欄位與重現指令</h2>
+<p><b>用到的 ArcSight 欄位:</b> <code>Event Time</code>、<code>sourceAddress</code>、<code>destinationAddress</code>、<code>destinationPort</code>、<code>requestUrl</code>、<code>requestMethod</code>、<code>requestClientApplication</code>、<code>deviceVendor</code>、<code>deviceProduct</code>、<code>deviceEventClassId</code>、<code>deviceAction</code>、<code>analysisEndpointCategory</code>、<code>analysisIsPathMutation</code>、<code>analysisIsGenericSensitivePath</code>、<code>analysisUserAgentFamily</code>、<code>analysisIsBlocked</code>。</p>
+<p><b>節奏計算法:</b>取有 <code>requestUrl</code> 的 WAF 事件,依 <code>Event Time</code> 排序,以 ≥10 秒間隔切「爆發群」,統計每群請求數、群間停頓、同秒占比。</p>
+<pre><code># 重現(Python 概念):
+# 1) csv.DictReader 讀檔(encoding='utf-8-sig')
+# 2) waf = [r for r in rows if r['requestUrl']]
+# 3) 依 Event Time 排序 → 相鄰時間差 deltas
+# 4) 以 delta>=10s 切 bursts;統計 median(每群筆數)、median(停頓)、同秒占比
+# 5) Counter(requestClientApplication) → distinct UA;正則比對畸形 UA</code></pre>
+
+<p class="foot">本文件基於去識別化資料與靜態程式碼分析,屬行為推定(信心中高),非鐵證。內部技術參考。</p>
+
+</div>
+</body>
+</html>
